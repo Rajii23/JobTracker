@@ -1,0 +1,29 @@
+# Node
+node_modules/
+dist/
+build/
+.env
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project specific
+backend/.env
+frontend/.env
+extension/.env
+backend/logs/
+
+# Optional: if you don't want to push the built extension
+extension/dist/
+
+# Credentials
+*.pem
+*.key
