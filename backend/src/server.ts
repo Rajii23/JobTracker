@@ -10,7 +10,7 @@ import aiRoutes from './routes/aiRoutes';
 
 dotenv.config();
 
-const app = express();
+export const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Middleware
@@ -33,13 +33,20 @@ app.get('/health', (req, res) => {
 });
 
 // Database Connection
-mongoose.connect(process.env.MONGODB_URI as string, {
-    serverSelectionTimeoutMS: 2000, // Faster fail-over for dev (2s vs default 30s)
-})
-    .then(() => console.log('Connected to MongoDB'))
-    .catch((err) => console.error('MongoDB connection error:', err));
+if (process.env.MONGODB_URI) {
+    mongoose.connect(process.env.MONGODB_URI as string, {
+        serverSelectionTimeoutMS: 2000,
+    })
+        .then(() => console.log('Connected to MongoDB'))
+        .catch((err) => console.error('MongoDB connection error:', err));
+}
 
 // Start Server
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-});
+if (process.env.NODE_ENV !== 'production') {
+    app.listen(PORT, () => {
+        console.log(`Server running on port ${PORT}`);
+    });
+}
+
+export default app;
+
