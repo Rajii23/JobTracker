@@ -10,7 +10,7 @@ chrome.runtime.onMessage.addListener((message: any, _sender: chrome.runtime.Mess
 
             try {
                 // 1. Exchange Google Token for App JWT
-                const authResponse = await fetch('http://localhost:5000/api/auth/google', {
+                const authResponse = await fetch('https://job-tracker-backend-psi.vercel.app/api/auth/google', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ token: finalToken, isExtension: true })
@@ -23,7 +23,7 @@ chrome.runtime.onMessage.addListener((message: any, _sender: chrome.runtime.Mess
                 const { token: jwtToken } = await authResponse.json();
 
                 // 2. Save Job using App JWT
-                const response = await fetch('http://localhost:5000/api/jobs/extension/save', {
+                const response = await fetch('https://job-tracker-backend-psi.vercel.app/api/jobs/extension/save', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -47,7 +47,8 @@ chrome.runtime.onMessage.addListener((message: any, _sender: chrome.runtime.Mess
     }
 
     if (message.type === 'OPEN_DASHBOARD') {
-        chrome.tabs.create({ url: 'http://localhost:3000' });
+        chrome.tabs.create({ url: 'https://job-tracker-frontend-topaz.vercel.app' });
         sendResponse({ success: true });
     }
+
 });

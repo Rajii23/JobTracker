@@ -37,7 +37,6 @@ interface Job {
 const Dashboard: React.FC = () => {
     const { user, logout, token } = useAuth();
     const [jobs, setJobs] = useState<Job[]>([]);
-    const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [isAddJobOpen, setIsAddJobOpen] = useState(false);
     const [selectedJob, setSelectedJob] = useState<Job | null>(null);
@@ -70,7 +69,6 @@ const Dashboard: React.FC = () => {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setJobs(response.data);
-            setLoading(false);
         } catch (error) {
             console.error('Error fetching jobs:', error);
             // Only load sample placeholder data if we have absolutely nothing and the fetch failed
@@ -89,7 +87,6 @@ const Dashboard: React.FC = () => {
                     }
                 ]);
             }
-            setLoading(false);
         }
     };
 
