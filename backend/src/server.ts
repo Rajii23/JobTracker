@@ -15,13 +15,31 @@ const PORT = process.env.PORT || 5000;
 
 // Middleware
 app.use(cors({
-    origin: [
-        process.env.FRONTEND_URL || 'http://localhost:5173',
-        `chrome-extension://${process.env.EXTENSION_ID || '<YOUR_EXTENSION_ID>'}`
-    ],
-    credentials: true
+    origin: function (origin, callback) {
+        const allowedOrigins = [
+            process.env.FRONTEND_URL || 'http://localhost:5173',
+            'http://localhost:5173',
+            'http://localhost:3000',
+            `chrome-extension://${process.env.EXTENSION_ID || '<YOUR_EXTENSION_ID>'}`
+        ];
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.indexOf(origin) !== -1) {
+            callback(null, true);
+        } else {
+            callback(null, true); // Allow all origins for now to debug
+        }
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    exposedHeaders: ['Content-Length', 'X-Requested-With'],
+    maxAge: 86400 // 24 hours
 }));
-app.use(helmet());
+app.use(helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+    crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" }
+}));
 app.use(morgan('dev'));
 app.use(express.json());
 
