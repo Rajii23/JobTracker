@@ -86,7 +86,7 @@ const JobDetailDialog: React.FC<JobDetailDialogProps> = ({ job, isOpen, onClose,
         setSaving(true);
         try {
             await axios.put(
-                `http://localhost:5000/api/jobs/${job._id}`,
+                `${import.meta.env.VITE_API_URL}/jobs/${job._id}`,
                 { jdText, notes },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
@@ -102,7 +102,7 @@ const JobDetailDialog: React.FC<JobDetailDialogProps> = ({ job, isOpen, onClose,
         setSaving(true);
         try {
             await axios.put(
-                `http://localhost:5000/api/jobs/${job._id}`,
+                `${import.meta.env.VITE_API_URL}/jobs/${job._id}`,
                 editedJob,
                 { headers: { Authorization: `Bearer ${token}` } }
             );
@@ -119,7 +119,7 @@ const JobDetailDialog: React.FC<JobDetailDialogProps> = ({ job, isOpen, onClose,
         setDeleting(true);
         try {
             await axios.delete(
-                `http://localhost:5000/api/jobs/${job._id}`,
+                `${import.meta.env.VITE_API_URL}/jobs/${job._id}`,
                 { headers: { Authorization: `Bearer ${token}` } }
             );
             onClose();
@@ -155,16 +155,16 @@ const JobDetailDialog: React.FC<JobDetailDialogProps> = ({ job, isOpen, onClose,
             let data: any = { jdText };
 
             if (action === 'resume') {
-                endpoint = '/api/ai/resume-suggestions';
+                endpoint = '/ai/resume-suggestions';
                 data.resumeText = 'My sample resume content...'; // In real app, get from user profile
             } else if (action === 'cover-letter') {
-                endpoint = '/api/ai/cover-letter';
+                endpoint = '/ai/cover-letter';
                 data.resumeText = 'My sample resume content...';
             } else if (action === 'questions') {
-                endpoint = '/api/ai/interview-questions';
+                endpoint = '/ai/interview-questions';
             }
 
-            const response = await axios.post(`http://localhost:5000${endpoint}`, data, {
+            const response = await axios.post(`${import.meta.env.VITE_API_URL}${endpoint}`, data, {
                 headers: { Authorization: `Bearer ${token}` }
             });
 
