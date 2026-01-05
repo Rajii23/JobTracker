@@ -22,6 +22,11 @@ import {
 } from 'lucide-react';
 import axios from 'axios';
 import { useAuth } from '@/context/AuthContext';
+import mammoth from 'mammoth';
+import * as pdfjsLib from 'pdfjs-dist';
+
+// Initialize PDF.js worker
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
 
 interface Job {
     _id: string;
@@ -154,16 +159,35 @@ const JobDetailDialog: React.FC<JobDetailDialogProps> = ({ job, isOpen, onClose,
         });
     };
 
-    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            const text = event.target?.result as string;
-            setResumeText(text);
-        };
-        reader.readAsText(file);
+        try {
+            if (file.type === 'application/pdf') {
+                const arrayBuffer = await file.arrayBuffer();
+                const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+                let fullText = '';
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const textContent = await page.getTextContent();
+                    const pageText = textContent.items.map((item: any) => item.str).join(' ');
+                    fullText += pageText + '\n';
+                }
+                setResumeText(fullText);
+            } else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+                const arrayBuffer = await file.arrayBuffer();
+                const result = await mammoth.extractRawText({ arrayBuffer });
+                setResumeText(result.value);
+            } else {
+                // Default text handler
+                const text = await file.text();
+                setResumeText(text);
+            }
+        } catch (error) {
+            console.error('Error reading file:', error);
+            alert('Failed to read file. Please ensure it is a valid PDF, DOCX, or Text file.');
+        }
     };
 
     const handleAIAction = async (action: 'resume' | 'cover-letter' | 'questions' | 'keywords') => {
@@ -479,7 +503,7 @@ const JobDetailDialog: React.FC<JobDetailDialogProps> = ({ job, isOpen, onClose,
                                             type="file"
                                             ref={fileInputRef}
                                             className="hidden"
-                                            accept=".txt,.md,.json" // Limit to text files for basic reader
+                                            accept=".txt,.md,.json,.pdf,.docx"
                                             onChange={handleFileUpload}
                                         />
                                         <Button
@@ -488,7 +512,7 @@ const JobDetailDialog: React.FC<JobDetailDialogProps> = ({ job, isOpen, onClose,
                                             onClick={() => fileInputRef.current?.click()}
                                         >
                                             <Upload className="w-4 h-4 mr-2" />
-                                            Upload File (Txt/MD)
+                                            Upload Resume (PDF/Word)
                                         </Button>
                                         <span className="text-xs text-gray-500 self-center">
                                             {resumeText ? 'Resume loaded' : 'No resume loaded'}
