@@ -89,3 +89,30 @@ export const getInterviewQuestions = async (req: Request, res: Response) => {
         });
     }
 };
+
+export const getKeywordAnalysis = async (req: Request, res: Response) => {
+    const { jdText, resumeText } = req.body;
+    try {
+        if (!process.env.OPENAI_API_KEY) throw new Error('No API Key');
+        const completion = await getOpenAI().chat.completions.create({
+            model: "gpt-4o-mini",
+            messages: [
+                { role: "system", content: "You are an ATS expert. Analyze the JD and Resume. Return JSON." },
+                { role: "user", content: `Job Description: ${jdText}\n\nResume: ${resumeText}\n\nProvide:\n1. missingKeywords (list of strings)\n2. matchedKeywords (top 5 list)\n3. keyPointers (3 short actionable tips)\nReturn JSON only.` }
+            ],
+            response_format: { type: "json_object" }
+        });
+        res.status(200).json(JSON.parse(completion.choices[0].message.content || '{}'));
+    } catch (error) {
+        console.warn('AI Error or No Key, using mock keywords');
+        res.status(200).json({
+            missingKeywords: ["Cloud Architecture", "Typescript", "CI/CD"],
+            matchedKeywords: ["React", "Node.js", "Team Leadership", "Agile", "API Design"],
+            keyPointers: [
+                "Include more metrics in your project descriptions.",
+                "Explicitly mention 'Cloud Architecture' in your skills section.",
+                "Highlight your experience with CI/CD pipelines."
+            ]
+        });
+    }
+};

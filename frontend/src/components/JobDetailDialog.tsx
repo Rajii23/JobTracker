@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import {
+    Upload,
+    Target,
     Building2,
     MapPin,
     Calendar,
@@ -48,6 +50,7 @@ const JobDetailDialog: React.FC<JobDetailDialogProps> = ({ job, isOpen, onClose,
     const [activeTab, setActiveTab] = useState<'details' | 'jd' | 'ai' | 'notes'>('details');
     const [jdText, setJdText] = useState(job.jdText || '');
     const [notes, setNotes] = useState(job.notes || '');
+    const [resumeText, setResumeText] = useState('');
     const [saving, setSaving] = useState(false);
     const [isEditMode, setIsEditMode] = useState(false);
     const [editedJob, setEditedJob] = useState({
@@ -67,7 +70,10 @@ const JobDetailDialog: React.FC<JobDetailDialogProps> = ({ job, isOpen, onClose,
         resumeAnalysis?: any;
         coverLetter?: string;
         questions?: string[];
+        keywordAnalysis?: any;
     }>({});
+
+    const fileInputRef = React.useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         setJdText(job.jdText || '');
@@ -148,7 +154,19 @@ const JobDetailDialog: React.FC<JobDetailDialogProps> = ({ job, isOpen, onClose,
         });
     };
 
-    const handleAIAction = async (action: 'resume' | 'cover-letter' | 'questions') => {
+    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const text = event.target?.result as string;
+            setResumeText(text);
+        };
+        reader.readAsText(file);
+    };
+
+    const handleAIAction = async (action: 'resume' | 'cover-letter' | 'questions' | 'keywords') => {
         setAiLoading(prev => ({ ...prev, [action]: true }));
         try {
             let endpoint = '';
@@ -156,12 +174,15 @@ const JobDetailDialog: React.FC<JobDetailDialogProps> = ({ job, isOpen, onClose,
 
             if (action === 'resume') {
                 endpoint = '/ai/resume-suggestions';
-                data.resumeText = 'My sample resume content...'; // In real app, get from user profile
+                data.resumeText = resumeText || 'My sample resume content...';
             } else if (action === 'cover-letter') {
                 endpoint = '/ai/cover-letter';
-                data.resumeText = 'My sample resume content...';
+                data.resumeText = resumeText || 'My sample resume content...';
             } else if (action === 'questions') {
                 endpoint = '/ai/interview-questions';
+            } else if (action === 'keywords') {
+                endpoint = '/ai/keyword-analysis';
+                data.resumeText = resumeText || 'My sample resume content...';
             }
 
             const response = await axios.post(`${import.meta.env.VITE_API_URL}${endpoint}`, data, {
@@ -171,6 +192,7 @@ const JobDetailDialog: React.FC<JobDetailDialogProps> = ({ job, isOpen, onClose,
             if (action === 'resume') setAiResults(prev => ({ ...prev, resumeAnalysis: response.data }));
             if (action === 'cover-letter') setAiResults(prev => ({ ...prev, coverLetter: response.data.text }));
             if (action === 'questions') setAiResults(prev => ({ ...prev, questions: response.data.questions }));
+            if (action === 'keywords') setAiResults(prev => ({ ...prev, keywordAnalysis: response.data }));
 
         } catch (error) {
             console.error(`AI ${action} error:`, error);
@@ -441,8 +463,99 @@ const JobDetailDialog: React.FC<JobDetailDialogProps> = ({ job, isOpen, onClose,
                     )}
 
                     {activeTab === 'ai' && (
-                        <div className="space-y-4">
+                        <div className="space-y-6">
+                            {/* Resume Input Section */}
+                            <div className="p-4 border rounded-lg bg-gray-50 border-gray-200">
+                                <h3 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                                    <FileText className="w-4 h-4" />
+                                    Your Resume
+                                </h3>
+                                <p className="text-sm text-gray-600 mb-3">
+                                    Upload or paste your resume content to personalize AI suggestions.
+                                </p>
+                                <div className="space-y-3">
+                                    <div className="flex gap-2">
+                                        <input
+                                            type="file"
+                                            ref={fileInputRef}
+                                            className="hidden"
+                                            accept=".txt,.md,.json" // Limit to text files for basic reader
+                                            onChange={handleFileUpload}
+                                        />
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => fileInputRef.current?.click()}
+                                        >
+                                            <Upload className="w-4 h-4 mr-2" />
+                                            Upload File (Txt/MD)
+                                        </Button>
+                                        <span className="text-xs text-gray-500 self-center">
+                                            {resumeText ? 'Resume loaded' : 'No resume loaded'}
+                                        </span>
+                                    </div>
+                                    <Textarea
+                                        placeholder="Or paste your resume text here..."
+                                        className="h-32 text-xs font-mono"
+                                        value={resumeText}
+                                        onChange={(e) => setResumeText(e.target.value)}
+                                    />
+                                </div>
+                            </div>
+
                             <div className="grid grid-cols-1 gap-6">
+                                <div className="p-4 border rounded-lg bg-orange-50 border-orange-100">
+                                    <div className="flex items-start gap-3">
+                                        <div className="p-2 bg-orange-100 rounded-lg">
+                                            <Target className="w-5 h-5 text-orange-600" />
+                                        </div>
+                                        <div className="flex-1">
+                                            <h3 className="font-semibold text-orange-900">Match Keywords</h3>
+                                            <p className="text-sm text-orange-700 mt-1">
+                                                Check which keywords from the job description are missing in your resume.
+                                            </p>
+                                            <Button
+                                                size="sm"
+                                                className="mt-3 bg-orange-600 hover:bg-orange-700"
+                                                disabled={!jdText || !resumeText || aiLoading['keywords']}
+                                                onClick={() => handleAIAction('keywords')}
+                                            >
+                                                {aiLoading['keywords']
+                                                    ? 'Analyzing...'
+                                                    : (!jdText ? 'Add Job Description First' : (!resumeText ? 'Add Resume First' : 'Find Missing Keywords'))}
+                                            </Button>
+
+                                            {aiResults.keywordAnalysis && (
+                                                <div className="mt-4 space-y-3 bg-white p-4 rounded border border-orange-200 text-sm ai-result-box">
+                                                    <div>
+                                                        <span className="font-bold text-orange-800">Matched Keywords:</span>
+                                                        <div className="flex flex-wrap gap-1 mt-1">
+                                                            {aiResults.keywordAnalysis.matchedKeywords?.map((kw: string, i: number) => (
+                                                                <Badge key={i} className="bg-green-100 text-green-800 hover:bg-green-200 border-0">{kw}</Badge>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <span className="font-bold text-red-700">Missing Keywords (Add these!):</span>
+                                                        <div className="flex flex-wrap gap-1 mt-1">
+                                                            {aiResults.keywordAnalysis.missingKeywords?.map((kw: string, i: number) => (
+                                                                <Badge key={i} variant="outline" className="border-red-300 text-red-700">{kw}</Badge>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <span className="font-bold text-orange-800">Quick Pointers:</span>
+                                                        <ul className="list-disc ml-4 space-y-1 mt-1 text-gray-700">
+                                                            {aiResults.keywordAnalysis.keyPointers?.map((p: string, i: number) => (
+                                                                <li key={i}>{p}</li>
+                                                            ))}
+                                                        </ul>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
                                 <div className="p-4 border rounded-lg bg-blue-50 border-blue-100">
                                     <div className="flex items-start gap-3">
                                         <div className="p-2 bg-blue-100 rounded-lg">
@@ -456,10 +569,12 @@ const JobDetailDialog: React.FC<JobDetailDialogProps> = ({ job, isOpen, onClose,
                                             <Button
                                                 size="sm"
                                                 className="mt-3 bg-blue-600 hover:bg-blue-700"
-                                                disabled={!jdText || aiLoading['resume']}
+                                                disabled={!jdText || !resumeText || aiLoading['resume']}
                                                 onClick={() => handleAIAction('resume')}
                                             >
-                                                {aiLoading['resume'] ? 'Analyzing...' : (jdText ? 'Analyze Resume' : 'Add Job Description First')}
+                                                {aiLoading['resume']
+                                                    ? 'Analyzing...'
+                                                    : (!jdText ? 'Add Job Description First' : (!resumeText ? 'Add Resume First' : 'Analyze Resume'))}
                                             </Button>
 
                                             {aiResults.resumeAnalysis && (
@@ -492,10 +607,12 @@ const JobDetailDialog: React.FC<JobDetailDialogProps> = ({ job, isOpen, onClose,
                                             <Button
                                                 size="sm"
                                                 className="mt-3 bg-purple-600 hover:bg-purple-700"
-                                                disabled={!jdText || aiLoading['cover-letter']}
+                                                disabled={!jdText || !resumeText || aiLoading['cover-letter']}
                                                 onClick={() => handleAIAction('cover-letter')}
                                             >
-                                                {aiLoading['cover-letter'] ? 'Generating...' : (jdText ? 'Generate Draft' : 'Add Job Description First')}
+                                                {aiLoading['cover-letter']
+                                                    ? 'Generating...'
+                                                    : (!jdText ? 'Add Job Description First' : (!resumeText ? 'Add Resume First' : 'Generate Draft'))}
                                             </Button>
 
                                             {aiResults.coverLetter && (
