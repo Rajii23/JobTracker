@@ -10,7 +10,7 @@ import axios from 'axios';
 const Login: React.FC = () => {
     const navigate = useNavigate();
     const { login } = useAuth();
-    const [showDevBypass, setShowDevBypass] = useState(false);
+
 
     const handleGoogleSuccess = async (credentialResponse: CredentialResponse) => {
         try {
@@ -38,17 +38,7 @@ const Login: React.FC = () => {
         alert('Google Login Failed. Please try again.');
     };
 
-    // TEMPORARY: Development bypass (remove in production)
-    const handleDevBypass = () => {
-        const devUser = {
-            email: 'dev@test.com',
-            name: 'Dev User',
-            picture: ''
-        };
-        const devToken = 'dev-token-' + Date.now();
-        login(devToken, devUser);
-        navigate('/');
-    };
+
 
     return (
         <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -68,30 +58,7 @@ const Login: React.FC = () => {
                         text="signin_with"
                     />
 
-                    {/* Development Bypass */}
-                    <div className="w-full border-t pt-4 mt-2">
-                        {!showDevBypass ? (
-                            <button
-                                onClick={() => setShowDevBypass(true)}
-                                className="text-xs text-gray-400 hover:text-gray-600 w-full text-center"
-                            >
-                                Development Mode
-                            </button>
-                        ) : (
-                            <div className="space-y-2">
-                                <p className="text-xs text-gray-500 text-center">
-                                    ⚠️ Waiting for Google OAuth? Use dev bypass:
-                                </p>
-                                <Button
-                                    onClick={handleDevBypass}
-                                    variant="outline"
-                                    className="w-full text-sm"
-                                >
-                                    🔧 Skip to Dashboard (Dev Only)
-                                </Button>
-                            </div>
-                        )}
-                    </div>
+
                 </CardContent>
             </Card>
         </div>
