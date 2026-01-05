@@ -50,7 +50,8 @@ app.use('/api/ai', aiRoutes);
 
 // Health Check
 app.get('/health', (req, res) => {
-    res.status(200).json({ status: 'ok' });
+    const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
+    res.status(200).json({ status: 'ok', dbStatus, readyState: mongoose.connection.readyState });
 });
 
 // Database Connection
