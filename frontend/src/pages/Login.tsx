@@ -1,9 +1,8 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { GoogleLogin } from '@react-oauth/google';
 import type { CredentialResponse } from '@react-oauth/google';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/AuthContext';
 import axios from 'axios';
 
