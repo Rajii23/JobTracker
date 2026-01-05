@@ -48,19 +48,36 @@ app.use('/api/auth', authRoutes);
 app.use('/api/jobs', jobRoutes);
 app.use('/api/ai', aiRoutes);
 
+// Capture connection error
+let dbError: string | null = null;
+
 // Health Check
 app.get('/health', (req, res) => {
     const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
-    res.status(200).json({ status: 'ok', dbStatus, readyState: mongoose.connection.readyState });
+    res.status(200).json({
+        status: 'ok',
+        dbStatus,
+        readyState: mongoose.connection.readyState,
+        envVarCheck: process.env.MONGODB_URI ? 'Set' : 'Not Set',
+        lastError: dbError
+    });
 });
 
 // Database Connection
 if (process.env.MONGODB_URI) {
     mongoose.connect(process.env.MONGODB_URI as string, {
-        serverSelectionTimeoutMS: 2000,
+        serverSelectionTimeoutMS: 5000,
     })
-        .then(() => console.log('Connected to MongoDB'))
-        .catch((err) => console.error('MongoDB connection error:', err));
+        .then(() => {
+            console.log('Connected to MongoDB');
+            dbError = null;
+        })
+        .catch((err) => {
+            console.error('MongoDB connection error:', err);
+            dbError = err.message;
+        });
+} else {
+    dbError = 'MONGODB_URI environment variable is not set';
 }
 
 // Start Server
