@@ -58,7 +58,7 @@ function App() {
     });
   };
 
-  const openDashboard = () => chrome.tabs.create({ url: 'http://localhost:3000' });
+  const openDashboard = () => chrome.tabs.create({ url: 'https://job-tracker-frontend-topaz.vercel.app' });
   const openLinkedIn = () => chrome.tabs.create({ url: 'https://www.linkedin.com/in/' });
 
   // --- HOME VIEW ---

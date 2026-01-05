@@ -17,38 +17,7 @@ const loadMockJobs = () => {
     } catch (err) {
         console.warn('Failed to load mock jobs from file, using defaults');
     }
-    return [
-        {
-            _id: '1',
-            userId: '507f1f77bcf86cd799439011',
-            title: 'Senior Frontend Engineer',
-            company: 'Google',
-            location: 'Mountain View, CA',
-            status: 'interviewing',
-            dateApplied: new Date('2023-11-15'),
-            source: 'linkedin',
-            createdAt: new Date(),
-            updatedAt: new Date(),
-            salary: '$180k - $220k',
-            notes: [{ text: 'Referral from Sarah', date: new Date() }],
-            jdText: 'We are looking for a Senior Frontend Engineer...'
-        },
-        {
-            _id: '2',
-            userId: '507f1f77bcf86cd799439011',
-            title: 'Full Stack Developer',
-            company: 'Netflix',
-            location: 'Los Gatos, CA',
-            status: 'offer',
-            dateApplied: new Date('2023-11-10'),
-            source: 'indeed',
-            createdAt: new Date(),
-            updatedAt: new Date(),
-            salary: '$200k+',
-            notes: [],
-            jdText: ''
-        }
-    ];
+    return [];
 };
 
 let mockJobs: any[] = loadMockJobs();
