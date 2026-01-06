@@ -78,8 +78,10 @@ export const googleLogin = async (req: Request, res: Response) => {
         } catch (dbError) {
             console.warn('DB Error in Auth, failing over to in-memory user:', dbError);
             // Fallback for when DB is not connected
+            // Generate a pseudo-random unique ID based on email to keep users separate in mock mode
+            const mockId = Buffer.from(email).toString('hex').padEnd(24, '0').slice(0, 24);
             user = {
-                _id: '507f1f77bcf86cd799439011', // Consistent mock ID
+                _id: mockId,
                 googleId,
                 email,
                 name,
