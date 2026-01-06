@@ -259,6 +259,35 @@ const Dashboard: React.FC = () => {
                                     <option value="rejected">Rejected</option>
                                 </select>
                             </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-sm font-medium text-gray-700">Location</label>
+                                    <Input
+                                        value={newJob.location}
+                                        onChange={(e) => setNewJob({ ...newJob, location: e.target.value })}
+                                        placeholder="e.g. Remote"
+                                        className="mt-1"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-sm font-medium text-gray-700">Salary</label>
+                                    <Input
+                                        value={newJob.salary}
+                                        onChange={(e) => setNewJob({ ...newJob, salary: e.target.value })}
+                                        placeholder="e.g. $120k"
+                                        className="mt-1"
+                                    />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="text-sm font-medium text-gray-700">Job URL</label>
+                                <Input
+                                    value={newJob.url}
+                                    onChange={(e) => setNewJob({ ...newJob, url: e.target.value })}
+                                    placeholder="https://..."
+                                    className="mt-1"
+                                />
+                            </div>
                             <div>
                                 <label className="text-sm font-medium text-gray-700">Description</label>
                                 <Textarea
