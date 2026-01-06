@@ -41,6 +41,7 @@ interface Job {
     salary?: string;
     notes?: string;
     jdText?: string;
+    tailoredResume?: string;
 }
 
 interface JobDetailDialogProps {
@@ -52,10 +53,11 @@ interface JobDetailDialogProps {
 
 const JobDetailDialog: React.FC<JobDetailDialogProps> = ({ job, isOpen, onClose, onUpdate }) => {
     const { token } = useAuth();
-    const [activeTab, setActiveTab] = useState<'details' | 'jd' | 'ai' | 'notes'>('details');
+    const [activeTab, setActiveTab] = useState<'details' | 'jd' | 'ai' | 'notes' | 'resume'>('details');
     const [jdText, setJdText] = useState(job.jdText || '');
     const [notes, setNotes] = useState(job.notes || '');
     const [resumeText, setResumeText] = useState('');
+    const [tailoredResume, setTailoredResume] = useState(job.tailoredResume || '');
     const [saving, setSaving] = useState(false);
     const [isEditMode, setIsEditMode] = useState(false);
     const [editedJob, setEditedJob] = useState({
@@ -83,6 +85,7 @@ const JobDetailDialog: React.FC<JobDetailDialogProps> = ({ job, isOpen, onClose,
     useEffect(() => {
         setJdText(job.jdText || '');
         setNotes(job.notes || '');
+        setTailoredResume(job.tailoredResume || '');
         setEditedJob({
             title: job.title,
             company: job.company,
@@ -98,7 +101,7 @@ const JobDetailDialog: React.FC<JobDetailDialogProps> = ({ job, isOpen, onClose,
         try {
             await axios.put(
                 `${import.meta.env.VITE_API_URL}/jobs/${job._id}`,
-                { jdText, notes },
+                { jdText, notes, tailoredResume },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
             onUpdate();
@@ -318,6 +321,15 @@ const JobDetailDialog: React.FC<JobDetailDialogProps> = ({ job, isOpen, onClose,
                         Job Description
                     </button>
                     <button
+                        className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === 'resume'
+                            ? 'border-blue-600 text-blue-600'
+                            : 'border-transparent text-gray-500 hover:text-gray-700'
+                            }`}
+                        onClick={() => setActiveTab('resume')}
+                    >
+                        Tailored Resume
+                    </button>
+                    <button
                         className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === 'ai'
                             ? 'border-blue-600 text-blue-600'
                             : 'border-transparent text-gray-500 hover:text-gray-700'
@@ -483,6 +495,89 @@ const JobDetailDialog: React.FC<JobDetailDialogProps> = ({ job, isOpen, onClose,
                                 value={jdText}
                                 onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setJdText(e.target.value)}
                             />
+                        </div>
+                    )}
+
+                    {activeTab === 'resume' && (
+                        <div className="space-y-4">
+                            <div className="flex justify-between items-center">
+                                <div>
+                                    <label className="text-sm font-medium text-gray-700">
+                                        Tailored Resume for {job.company}
+                                    </label>
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        Save a customized version of your resume specifically for this job application
+                                    </p>
+                                </div>
+                                <Button size="sm" onClick={handleSave} disabled={saving}>
+                                    <Save className="w-4 h-4 mr-2" />
+                                    {saving ? 'Saving...' : 'Save Resume'}
+                                </Button>
+                            </div>
+
+                            <div className="p-4 border rounded-lg bg-blue-50 border-blue-200">
+                                <div className="flex items-start gap-3">
+                                    <div className="p-2 bg-blue-100 rounded-lg">
+                                        <FileText className="w-5 h-5 text-blue-600" />
+                                    </div>
+                                    <div className="flex-1">
+                                        <h3 className="font-semibold text-blue-900 mb-2">Upload Resume File</h3>
+                                        <p className="text-sm text-blue-700 mb-3">
+                                            Upload your tailored resume (PDF, Word, or Text) and it will be extracted here for editing
+                                        </p>
+                                        <div className="flex gap-2">
+                                            <input
+                                                type="file"
+                                                ref={fileInputRef}
+                                                className="hidden"
+                                                accept=".txt,.md,.json,.pdf,.docx"
+                                                onChange={async (e) => {
+                                                    await handleFileUpload(e);
+                                                    if (resumeText) {
+                                                        setTailoredResume(resumeText);
+                                                    }
+                                                }}
+                                            />
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => fileInputRef.current?.click()}
+                                            >
+                                                <Upload className="w-4 h-4 mr-2" />
+                                                Upload Resume File
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <Textarea
+                                placeholder="Paste or type your tailored resume here..."
+                                className="min-h-[400px] font-mono text-sm"
+                                value={tailoredResume}
+                                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setTailoredResume(e.target.value)}
+                            />
+
+                            {tailoredResume && (
+                                <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
+                                    <div className="flex items-center gap-2">
+                                        <FileText className="w-4 h-4 text-green-600" />
+                                        <span className="text-sm text-green-800 font-medium">
+                                            Resume saved ({tailoredResume.length} characters)
+                                        </span>
+                                    </div>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => {
+                                            navigator.clipboard.writeText(tailoredResume);
+                                            alert('Resume copied to clipboard!');
+                                        }}
+                                    >
+                                        Copy to Clipboard
+                                    </Button>
+                                </div>
+                            )}
                         </div>
                     )}
 
