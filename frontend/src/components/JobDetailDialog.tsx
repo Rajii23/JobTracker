@@ -615,14 +615,6 @@ const JobDetailDialog: React.FC<JobDetailDialogProps> = ({ job, isOpen, onClose,
                                                 >
                                                     View / Download
                                                 </Button>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                                                    onClick={() => setResumeFile(null)}
-                                                >
-                                                    Remove
-                                                </Button>
                                             </div>
                                         </>
                                     ) : (
