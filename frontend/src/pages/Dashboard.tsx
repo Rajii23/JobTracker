@@ -3,6 +3,7 @@ import { useAuth } from '@/context/AuthContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import {
     Briefcase,
     MapPin,
@@ -48,7 +49,8 @@ const Dashboard: React.FC = () => {
         url: '',
         status: 'applied',
         location: '',
-        salary: ''
+        salary: '',
+        jdText: ''
     });
 
     const columns = [
@@ -96,7 +98,7 @@ const Dashboard: React.FC = () => {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setIsAddJobOpen(false);
-            setNewJob({ title: '', company: '', url: '', status: 'applied', location: '', salary: '' });
+            setNewJob({ title: '', company: '', url: '', status: 'applied', location: '', salary: '', jdText: '' });
             fetchJobs();
         } catch (error) {
             console.error('Error adding job:', error);
@@ -256,6 +258,16 @@ const Dashboard: React.FC = () => {
                                     <option value="offer">Offer</option>
                                     <option value="rejected">Rejected</option>
                                 </select>
+                            </div>
+                            <div>
+                                <label className="text-sm font-medium text-gray-700">Description</label>
+                                <Textarea
+                                    value={newJob.jdText}
+                                    onChange={(e) => setNewJob({ ...newJob, jdText: e.target.value })}
+                                    placeholder="Paste job description here..."
+                                    className="mt-1"
+                                    rows={4}
+                                />
                             </div>
                             <div className="flex justify-end gap-2 mt-6">
                                 <Button variant="outline" onClick={() => setIsAddJobOpen(false)}>Cancel</Button>
