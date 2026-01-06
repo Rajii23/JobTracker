@@ -17,6 +17,16 @@ const getOpenAI = (): OpenAI => {
 
 export const getResumeSuggestions = async (req: Request, res: Response) => {
     const { jdText, resumeText } = req.body;
+
+    if (!jdText || jdText.length < 50) {
+        return res.status(200).json({
+            summary: "The provided job description is too short for analysis.",
+            rewrittenPoints: [],
+            suggestedPoints: ["Please paste the full job description to get specific suggestions."],
+            matchScore: 0
+        });
+    }
+
     try {
         if (!process.env.OPENAI_API_KEY) throw new Error('No API Key');
         const completion = await getOpenAI().chat.completions.create({
@@ -31,22 +41,27 @@ export const getResumeSuggestions = async (req: Request, res: Response) => {
     } catch (error) {
         console.warn('AI Error or No Key, using mock suggestions');
         res.status(200).json({
-            summary: "Your background in software engineering is a great match. To stand out, emphasize your experience with distributed systems and cloud architecture mentioned in the JD.",
+            summary: "AI analysis unavailable (Check API Key). Showing sample data: Your background is a great match. To stand out, emphasize your experience with relevant skills mentioned in the JD.",
             rewrittenPoints: [
-                "Architected and deployed a microservices-based tracking system using Node.js and React, improving processing speed by 40%.",
-                "Led a team of 4 to deliver a cross-platform mobile app that reached 10k+ active users."
+                "Optimized system performance using relevant technologies, improving processing speed by 40%.",
+                "Led a team to deliver a key project that matched business requirements."
             ],
             suggestedPoints: [
-                "Collaborated with cross-functional teams to define architecture and requirements for high-availability systems.",
-                "Implemented automated CI/CD pipelines reducing deployment time by 60%."
+                "Collaborated with cross-functional teams to define architecture and requirements.",
+                "Implemented automated processes to reduce deployment time."
             ],
-            matchScore: 85
+            matchScore: 0
         });
     }
 };
 
 export const getCoverLetter = async (req: Request, res: Response) => {
     const { jdText, resumeText } = req.body;
+
+    if (!jdText || jdText.length < 50) {
+        return res.status(200).json({ text: "Please provide a longer job description (at least 50 characters) to generate a customized cover letter." });
+    }
+
     try {
         if (!process.env.OPENAI_API_KEY) throw new Error('No API Key');
         const completion = await getOpenAI().chat.completions.create({
@@ -59,12 +74,25 @@ export const getCoverLetter = async (req: Request, res: Response) => {
         res.status(200).json({ text: completion.choices[0].message.content });
     } catch (error) {
         console.warn('AI Error or No Key, using mock cover letter');
-        res.status(200).json({ text: `Dear Hiring Manager,\n\nI am writing to express my strong interest in the Developer position. With my background in full-stack development and passion for building scalable solutions, I am confident I would be a great addition to your team.\n\nIn my previous roles, I have consistently delivered high-quality software and worked effectively in agile environments. I am particularly impressed by your company's commitment to innovation and look forward to the possibility of contributing to your success.\n\nThank you for your time and consideration.\n\nBest regards,\nJob Tracker User` });
+        res.status(200).json({ text: `Dear Hiring Manager,\n\nI am writing to express my strong interest in the position. With my background and passion for this field, I am confident I would be a great addition to your team.\n\n(Note: This is a placeholder. Please configure your OpenAI API key to get personalized results based on your specific job description and resume.)\n\nThank you for your time and consideration.\n\nBest regards,\nJob Tracker User` });
     }
 };
 
 export const getInterviewQuestions = async (req: Request, res: Response) => {
     const { jdText } = req.body;
+
+    if (!jdText || jdText.length < 50) {
+        return res.status(200).json({
+            questions: [
+                "The job description provided is too short.",
+                "Please provide more details to generate specific interview questions.",
+                "What specific skills are required for this role?",
+                "Can you describe the responsibilities mentioned in the full description?",
+                "Why are you interested in this role?"
+            ]
+        });
+    }
+
     try {
         if (!process.env.OPENAI_API_KEY) throw new Error('No API Key');
         const completion = await getOpenAI().chat.completions.create({
@@ -80,10 +108,10 @@ export const getInterviewQuestions = async (req: Request, res: Response) => {
         console.warn('AI Error or No Key, using mock questions');
         res.status(200).json({
             questions: [
-                "Can you walk us through a challenging technical problem you solved recently?",
-                "How do you approach learning a new technology or framework?",
-                "Tell us about a time you had to work with a difficult teammate. How did you handle it?",
-                "What is your experience with CI/CD and automated testing?",
+                "Can you walk us through a challenging problem you solved recently?",
+                "How do you approach learning a new technology or skill required for this role?",
+                "Tell us about a time you had to work with a difficult teammate.",
+                "What is your experience with the core technologies listed in this job description?",
                 "Why are you interested in this specific role and our company?"
             ]
         });
@@ -92,6 +120,15 @@ export const getInterviewQuestions = async (req: Request, res: Response) => {
 
 export const getKeywordAnalysis = async (req: Request, res: Response) => {
     const { jdText, resumeText } = req.body;
+
+    if (!jdText || jdText.length < 50) {
+        return res.status(200).json({
+            missingKeywords: ["(Job Description too short)"],
+            matchedKeywords: [],
+            keyPointers: ["Please paste the full job description (at least 50 characters) to analyze keywords."]
+        });
+    }
+
     try {
         if (!process.env.OPENAI_API_KEY) throw new Error('No API Key');
         const completion = await getOpenAI().chat.completions.create({
@@ -106,12 +143,12 @@ export const getKeywordAnalysis = async (req: Request, res: Response) => {
     } catch (error) {
         console.warn('AI Error or No Key, using mock keywords');
         res.status(200).json({
-            missingKeywords: ["Cloud Architecture", "Typescript", "CI/CD"],
-            matchedKeywords: ["React", "Node.js", "Team Leadership", "Agile", "API Design"],
+            missingKeywords: ["Sample Keyword 1", "Sample Keyword 2"],
+            matchedKeywords: ["Sample Match"],
             keyPointers: [
-                "Include more metrics in your project descriptions.",
-                "Explicitly mention 'Cloud Architecture' in your skills section.",
-                "Highlight your experience with CI/CD pipelines."
+                "This is sample data because the AI service is unavailable.",
+                "Please check your OpenAI API key configuration.",
+                "Ensure your job description provides enough detail for analysis."
             ]
         });
     }
