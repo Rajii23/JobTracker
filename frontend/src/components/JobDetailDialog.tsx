@@ -132,8 +132,10 @@ const JobDetailDialog: React.FC<JobDetailDialogProps> = ({ job, isOpen, onClose,
 
             setResumeFile(null); // Clear pending file
             onUpdate();
+            alert('Job updated successfully!');
         } catch (error) {
             console.error('Error saving:', error);
+            alert('Failed to save job. Please try again.');
         } finally {
             setSaving(false);
         }
@@ -596,6 +598,23 @@ const JobDetailDialog: React.FC<JobDetailDialogProps> = ({ job, isOpen, onClose,
                                                 <p className="text-sm text-blue-600">{(resumeFile.size / 1024).toFixed(1)} KB</p>
                                             </div>
                                             <div className="flex gap-2 mt-2">
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                                    onClick={() => {
+                                                        const url = URL.createObjectURL(resumeFile);
+                                                        const link = document.createElement('a');
+                                                        link.href = url;
+                                                        link.download = resumeFile.name;
+                                                        document.body.appendChild(link);
+                                                        link.click();
+                                                        document.body.removeChild(link);
+                                                        URL.revokeObjectURL(url);
+                                                    }}
+                                                >
+                                                    View / Download
+                                                </Button>
                                                 <Button
                                                     variant="ghost"
                                                     size="sm"
