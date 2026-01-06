@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import axios from 'axios';
 import JobDetailDialog from '@/components/JobDetailDialog';
+import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
 
 interface Job {
     _id: string;
@@ -139,6 +140,50 @@ const Dashboard: React.FC = () => {
         if (diffDays === 1) return 'Yesterday';
         if (diffDays < 7) return `${diffDays} days ago`;
         return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    };
+
+    const onDragEnd = async (result: DropResult) => {
+        const { source, destination, draggableId } = result;
+
+        // Dropped outside the list
+        if (!destination) return;
+
+        // Dropped in the same place
+        if (
+            source.droppableId === destination.droppableId &&
+            source.index === destination.index
+        ) {
+            return;
+        }
+
+        // Find the job being moved
+        const jobMoved = jobs.find(j => j._id === draggableId);
+        if (!jobMoved) return;
+
+        const newStatus = destination.droppableId;
+
+        // Optimistically update the UI
+        const updatedJobs = jobs.map(job => {
+            if (job._id === draggableId) {
+                return { ...job, status: newStatus as any };
+            }
+            return job;
+        });
+        setJobs(updatedJobs);
+
+        // Update backend
+        try {
+            await axios.put(
+                `${import.meta.env.VITE_API_URL}/jobs/${draggableId}`,
+                { status: newStatus },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+        } catch (error) {
+            console.error('Failed to update job status:', error);
+            // Revert changes on failure
+            fetchJobs();
+            alert('Failed to update job status. Please try again.');
+        }
     };
 
     const getTotalJobs = () => jobs.length;
@@ -309,108 +354,133 @@ const Dashboard: React.FC = () => {
 
             {/* Kanban Board */}
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-                <div className="grid grid-cols-5 gap-4">
-                    {columns.map((column) => {
-                        const columnJobs = getJobsByStatus(column.id);
-                        return (
-                            <div key={column.id} className="flex flex-col">
-                                {/* Column Header */}
-                                <div className="mb-3">
-                                    <div className="flex items-center justify-between mb-2">
-                                        <div className="flex items-center gap-2">
-                                            <div className={`w-3 h-3 rounded-full ${column.color}`}></div>
-                                            <h3 className="font-semibold text-gray-900 text-sm">
-                                                {column.title}
-                                            </h3>
+                <DragDropContext onDragEnd={onDragEnd}>
+                    <div className="grid grid-cols-5 gap-4">
+                        {columns.map((column) => {
+                            const columnJobs = getJobsByStatus(column.id);
+                            return (
+                                <div key={column.id} className="flex flex-col h-full">
+                                    {/* Column Header */}
+                                    <div className="mb-3">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <div className="flex items-center gap-2">
+                                                <div className={`w-3 h-3 rounded-full ${column.color}`}></div>
+                                                <h3 className="font-semibold text-gray-900 text-sm">
+                                                    {column.title}
+                                                </h3>
+                                            </div>
+                                            <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+                                                {columnJobs.length}
+                                            </span>
                                         </div>
-                                        <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
-                                            {columnJobs.length}
-                                        </span>
                                     </div>
-                                </div>
 
-                                {/* Job Cards */}
-                                <div className="space-y-3 flex-1">
-                                    {columnJobs.map((job) => (
-                                        <Card
-                                            key={job._id}
-                                            className="hover:shadow-md transition-shadow cursor-pointer border-l-4"
-                                            style={{
-                                                borderLeftColor: column.color.replace('bg-', '#') === '#gray-500' ? '#6b7280' :
-                                                    column.color.replace('bg-', '#') === '#blue-500' ? '#3b82f6' :
-                                                        column.color.replace('bg-', '#') === '#yellow-500' ? '#eab308' :
-                                                            column.color.replace('bg-', '#') === '#green-500' ? '#22c55e' : '#ef4444'
-                                            }}
-                                            onClick={() => handleJobClick(job)}
-                                        >
-                                            <CardContent className="p-4">
-                                                <div className="flex justify-between items-start mb-2">
-                                                    <h4 className="font-semibold text-sm text-gray-900 line-clamp-2 flex-1">
-                                                        {job.title}
-                                                    </h4>
-                                                    <button className="text-gray-400 hover:text-gray-600">
-                                                        <MoreVertical className="w-4 h-4" />
-                                                    </button>
-                                                </div>
+                                    {/* Droppable Area */}
+                                    <Droppable droppableId={column.id}>
+                                        {(provided, snapshot) => (
+                                            <div
+                                                ref={provided.innerRef}
+                                                {...provided.droppableProps}
+                                                className={`space-y-3 flex-1 min-h-[500px] rounded-lg transition-colors ${snapshot.isDraggingOver ? 'bg-gray-100/50' : ''
+                                                    }`}
+                                            >
+                                                {columnJobs.map((job, index) => (
+                                                    <Draggable key={job._id} draggableId={job._id} index={index}>
+                                                        {(provided, snapshot) => (
+                                                            <div
+                                                                ref={provided.innerRef}
+                                                                {...provided.draggableProps}
+                                                                {...provided.dragHandleProps}
+                                                                style={{
+                                                                    ...provided.draggableProps.style,
+                                                                    opacity: snapshot.isDragging ? 0.8 : 1,
+                                                                }}
+                                                            >
+                                                                <Card
+                                                                    className={`hover:shadow-md transition-shadow cursor-pointer border-l-4 ${snapshot.isDragging ? 'shadow-xl rotate-2' : ''
+                                                                        }`}
+                                                                    style={{
+                                                                        borderLeftColor: column.color.replace('bg-', '#') === '#gray-500' ? '#6b7280' :
+                                                                            column.color.replace('bg-', '#') === '#blue-500' ? '#3b82f6' :
+                                                                                column.color.replace('bg-', '#') === '#yellow-500' ? '#eab308' :
+                                                                                    column.color.replace('bg-', '#') === '#green-500' ? '#22c55e' : '#ef4444'
+                                                                    }}
+                                                                    onClick={() => handleJobClick(job)}
+                                                                >
+                                                                    <CardContent className="p-4">
+                                                                        <div className="flex justify-between items-start mb-2">
+                                                                            <h4 className="font-semibold text-sm text-gray-900 line-clamp-2 flex-1">
+                                                                                {job.title}
+                                                                            </h4>
+                                                                            <button className="text-gray-400 hover:text-gray-600">
+                                                                                <MoreVertical className="w-4 h-4" />
+                                                                            </button>
+                                                                        </div>
 
-                                                <div className="flex items-center gap-1.5 mb-3">
-                                                    <Building2 className="w-3.5 h-3.5 text-gray-400" />
-                                                    <span className="text-xs font-medium text-gray-700">
-                                                        {job.company}
-                                                    </span>
-                                                </div>
+                                                                        <div className="flex items-center gap-1.5 mb-3">
+                                                                            <Building2 className="w-3.5 h-3.5 text-gray-400" />
+                                                                            <span className="text-xs font-medium text-gray-700">
+                                                                                {job.company}
+                                                                            </span>
+                                                                        </div>
 
-                                                {job.location && (
-                                                    <div className="flex items-center gap-1.5 mb-2">
-                                                        <MapPin className="w-3.5 h-3.5 text-gray-400" />
-                                                        <span className="text-xs text-gray-600">
-                                                            {job.location}
-                                                        </span>
+                                                                        {job.location && (
+                                                                            <div className="flex items-center gap-1.5 mb-2">
+                                                                                <MapPin className="w-3.5 h-3.5 text-gray-400" />
+                                                                                <span className="text-xs text-gray-600">
+                                                                                    {job.location}
+                                                                                </span>
+                                                                            </div>
+                                                                        )}
+
+                                                                        {job.salary && (
+                                                                            <div className="flex items-center gap-1.5 mb-3">
+                                                                                <DollarSign className="w-3.5 h-3.5 text-gray-400" />
+                                                                                <span className="text-xs text-gray-600">
+                                                                                    {job.salary}
+                                                                                </span>
+                                                                            </div>
+                                                                        )}
+
+                                                                        <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                                                                            <div className="flex items-center gap-1.5">
+                                                                                <Calendar className="w-3.5 h-3.5 text-gray-400" />
+                                                                                <span className="text-xs text-gray-500">
+                                                                                    {formatDate(job.dateApplied || job.createdAt)}
+                                                                                </span>
+                                                                            </div>
+                                                                            {job.url && (
+                                                                                <a
+                                                                                    href={job.url}
+                                                                                    target="_blank"
+                                                                                    rel="noopener noreferrer"
+                                                                                    className="text-blue-600 hover:text-blue-800"
+                                                                                    onClick={(e) => e.stopPropagation()}
+                                                                                >
+                                                                                    <ExternalLink className="w-3.5 h-3.5" />
+                                                                                </a>
+                                                                            )}
+                                                                        </div>
+                                                                    </CardContent>
+                                                                </Card>
+                                                            </div>
+                                                        )}
+                                                    </Draggable>
+                                                ))}
+                                                {provided.placeholder}
+                                                {columnJobs.length === 0 && (
+                                                    <div className="text-center py-8 text-gray-400 text-sm">
+                                                        No jobs
                                                     </div>
                                                 )}
-
-                                                {job.salary && (
-                                                    <div className="flex items-center gap-1.5 mb-3">
-                                                        <DollarSign className="w-3.5 h-3.5 text-gray-400" />
-                                                        <span className="text-xs text-gray-600">
-                                                            {job.salary}
-                                                        </span>
-                                                    </div>
-                                                )}
-
-                                                <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-                                                    <div className="flex items-center gap-1.5">
-                                                        <Calendar className="w-3.5 h-3.5 text-gray-400" />
-                                                        <span className="text-xs text-gray-500">
-                                                            {formatDate(job.dateApplied || job.createdAt)}
-                                                        </span>
-                                                    </div>
-                                                    {job.url && (
-                                                        <a
-                                                            href={job.url}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            className="text-blue-600 hover:text-blue-800"
-                                                            onClick={(e) => e.stopPropagation()}
-                                                        >
-                                                            <ExternalLink className="w-3.5 h-3.5" />
-                                                        </a>
-                                                    )}
-                                                </div>
-                                            </CardContent>
-                                        </Card>
-                                    ))}
-
-                                    {columnJobs.length === 0 && (
-                                        <div className="text-center py-8 text-gray-400 text-sm">
-                                            No jobs
-                                        </div>
-                                    )}
+                                            </div>
+                                        )}
+                                    </Droppable>
                                 </div>
-                            </div>
-                        );
-                    })}
-                </div>
+                            );
+                        })}
+                    </div>
+                </DragDropContext>
             </div>
 
             {selectedJob && (
