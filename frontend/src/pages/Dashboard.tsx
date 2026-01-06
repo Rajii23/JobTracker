@@ -7,7 +7,6 @@ import { Textarea } from '@/components/ui/textarea';
 import {
     Briefcase,
     MapPin,
-    Calendar,
     DollarSign,
     Clock,
     Search,
@@ -15,7 +14,8 @@ import {
     Plus,
     MoreVertical,
     Building2,
-    ExternalLink
+    ExternalLink,
+    LogOut
 } from 'lucide-react';
 import axios from 'axios';
 import JobDetailDialog from '@/components/JobDetailDialog';
@@ -192,21 +192,34 @@ const Dashboard: React.FC = () => {
     return (
         <div className="min-h-screen bg-gray-50">
             {/* Top Navigation */}
-            <nav className="bg-white border-b border-gray-200 sticky top-0 z-10">
+            <nav className="bg-white/80 backdrop-blur-md border-b border-gray-200 sticky top-0 z-50">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex justify-between items-center h-16">
-                        <div className="flex items-center gap-8">
-                            <h1 className="text-xl font-bold text-gray-900">Job Tracker</h1>
-
+                        <div className="flex items-center gap-3">
+                            <div className="bg-blue-600 p-1.5 rounded-lg shadow-sm">
+                                <Briefcase className="w-5 h-5 text-white" />
+                            </div>
+                            <h1 className="text-xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
+                                Job Tracker
+                            </h1>
                         </div>
-                        <div className="flex items-center gap-4">
-                            <div className="flex items-center gap-2">
-                                <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-semibold">
+                        <div className="flex items-center gap-6">
+                            <div className="flex items-center gap-3 px-3 py-1.5 rounded-full hover:bg-gray-50 transition-colors cursor-pointer border border-transparent hover:border-gray-200">
+                                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-semibold text-sm shadow-sm ring-2 ring-white">
                                     {user?.name?.charAt(0) || 'U'}
                                 </div>
-                                <span className="text-sm font-medium text-gray-700">{user?.name || 'User'}</span>
+                                <div className="hidden sm:block">
+                                    <p className="text-xs font-semibold text-gray-900 leading-none">{user?.name || 'User'}</p>
+                                    <p className="text-[10px] text-gray-500 mt-0.5">{user?.email}</p>
+                                </div>
                             </div>
-                            <Button variant="outline" size="sm" onClick={logout}>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={logout}
+                                className="text-gray-500 hover:text-red-600 hover:bg-red-50 transition-all font-medium"
+                            >
+                                <LogOut className="w-4 h-4 mr-2" />
                                 Logout
                             </Button>
                         </div>
@@ -218,17 +231,21 @@ const Dashboard: React.FC = () => {
             <div className="bg-white border-b border-gray-200">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
                     <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-6">
-                            <div className="flex items-center gap-2">
-                                <Briefcase className="w-5 h-5 text-gray-400" />
-                                <span className="text-sm text-gray-600">
-                                    <span className="font-semibold text-gray-900">{getTotalJobs()}</span> Total Jobs
+                        <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-lg border border-gray-100 shadow-sm">
+                                <div className="p-1 bg-white rounded shadow-sm">
+                                    <Briefcase className="w-4 h-4 text-gray-400" />
+                                </div>
+                                <span className="text-xs text-gray-600">
+                                    <span className="font-bold text-gray-900">{getTotalJobs()}</span> Total
                                 </span>
                             </div>
-                            <div className="flex items-center gap-2">
-                                <Clock className="w-5 h-5 text-blue-500" />
-                                <span className="text-sm text-gray-600">
-                                    <span className="font-semibold text-gray-900">{getActiveApplications()}</span> Active
+                            <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50/50 rounded-lg border border-blue-100/50 shadow-sm">
+                                <div className="p-1 bg-white rounded shadow-sm">
+                                    <Clock className="w-4 h-4 text-blue-500" />
+                                </div>
+                                <span className="text-xs text-gray-600">
+                                    <span className="font-bold text-blue-700">{getActiveApplications()}</span> Active
                                 </span>
                             </div>
                         </div>
@@ -247,8 +264,12 @@ const Dashboard: React.FC = () => {
                                 <Filter className="w-4 h-4 mr-2" />
                                 Filter
                             </Button>
-                            <Button size="sm" onClick={() => setIsAddJobOpen(true)}>
-                                <Plus className="w-4 h-4 mr-2" />
+                            <Button
+                                size="sm"
+                                onClick={() => setIsAddJobOpen(true)}
+                                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md hover:shadow-lg transition-all border-none font-bold"
+                            >
+                                <Plus className="w-4 h-4 mr-1.5" />
                                 Add Job
                             </Button>
                         </div>
@@ -343,23 +364,23 @@ const Dashboard: React.FC = () => {
             )}
 
             {/* Kanban Board */}
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-                <DragDropContext onDragEnd={onDragEnd}>
-                    <div className="grid grid-cols-5 gap-4">
+            <DragDropContext onDragEnd={onDragEnd}>
+                <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                    <div className="flex gap-6 overflow-x-auto pb-6 scrollbar-hide min-h-[calc(100vh-280px)]">
                         {columns.map((column) => {
                             const columnJobs = getJobsByStatus(column.id);
                             return (
-                                <div key={column.id} className="flex flex-col h-full">
+                                <div key={column.id} className="flex flex-col flex-shrink-0 w-80 bg-gray-100/50 rounded-xl border border-gray-200/50 backdrop-blur-sm">
                                     {/* Column Header */}
-                                    <div className="mb-3">
-                                        <div className="flex items-center justify-between mb-2">
+                                    <div className="p-4">
+                                        <div className="flex items-center justify-between mb-1">
                                             <div className="flex items-center gap-2">
-                                                <div className={`w-3 h-3 rounded-full ${column.color}`}></div>
-                                                <h3 className="font-semibold text-gray-900 text-sm">
+                                                <div className={`w-2 h-2 rounded-full ${column.color} shadow-sm`}></div>
+                                                <h3 className="font-bold text-gray-900 text-xs tracking-wider uppercase">
                                                     {column.title}
                                                 </h3>
                                             </div>
-                                            <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+                                            <span className="text-[10px] font-bold text-gray-400 bg-white border border-gray-100 px-2 py-0.5 rounded-full shadow-sm">
                                                 {columnJobs.length}
                                             </span>
                                         </div>
@@ -371,7 +392,7 @@ const Dashboard: React.FC = () => {
                                             <div
                                                 ref={provided.innerRef}
                                                 {...provided.droppableProps}
-                                                className={`space-y-3 flex-1 min-h-[500px] rounded-lg transition-colors ${snapshot.isDraggingOver ? 'bg-gray-100/50' : ''
+                                                className={`flex-1 p-3 space-y-4 transition-colors duration-200 rounded-b-xl min-h-[500px] ${snapshot.isDraggingOver ? 'bg-blue-50/50' : ''
                                                     }`}
                                             >
                                                 {columnJobs.map((job, index) => (
@@ -387,67 +408,67 @@ const Dashboard: React.FC = () => {
                                                                 }}
                                                             >
                                                                 <Card
-                                                                    className={`hover:shadow-md transition-shadow cursor-pointer border-l-4 ${snapshot.isDragging ? 'shadow-xl rotate-2' : ''
+                                                                    className={`group hover:shadow-lg transition-all duration-300 cursor-pointer border-l-4 bg-white hover:-translate-y-1 ${snapshot.isDragging ? 'shadow-2xl rotate-2 ring-2 ring-blue-500/20' : 'shadow-sm'
                                                                         }`}
                                                                     style={{
-                                                                        borderLeftColor: column.color.replace('bg-', '#') === '#gray-500' ? '#6b7280' :
-                                                                            column.color.replace('bg-', '#') === '#blue-500' ? '#3b82f6' :
-                                                                                column.color.replace('bg-', '#') === '#yellow-500' ? '#eab308' :
-                                                                                    column.color.replace('bg-', '#') === '#green-500' ? '#22c55e' : '#ef4444'
+                                                                        borderLeftColor: column.color === 'bg-gray-500' ? '#94a3b8' :
+                                                                            column.color === 'bg-blue-500' ? '#3b82f6' :
+                                                                                column.color === 'bg-yellow-500' ? '#f59e0b' :
+                                                                                    column.color === 'bg-green-500' ? '#10b981' : '#ef4444'
                                                                     }}
                                                                     onClick={() => handleJobClick(job)}
                                                                 >
                                                                     <CardContent className="p-4">
                                                                         <div className="flex justify-between items-start mb-2">
-                                                                            <h4 className="font-semibold text-sm text-gray-900 line-clamp-2 flex-1">
+                                                                            <h4 className="font-bold text-sm text-gray-900 line-clamp-2 flex-1 group-hover:text-blue-600 transition-colors">
                                                                                 {job.title}
                                                                             </h4>
-                                                                            <button className="text-gray-400 hover:text-gray-600">
+                                                                            <button className="text-gray-300 hover:text-gray-600 transition-colors">
                                                                                 <MoreVertical className="w-4 h-4" />
                                                                             </button>
                                                                         </div>
 
                                                                         <div className="flex items-center gap-1.5 mb-3">
-                                                                            <Building2 className="w-3.5 h-3.5 text-gray-400" />
-                                                                            <span className="text-xs font-medium text-gray-700">
+                                                                            <Building2 className="w-3.5 h-3.5 text-blue-500/60" />
+                                                                            <span className="text-xs font-semibold text-gray-600">
                                                                                 {job.company}
                                                                             </span>
                                                                         </div>
 
-                                                                        {job.location && (
-                                                                            <div className="flex items-center gap-1.5 mb-2">
-                                                                                <MapPin className="w-3.5 h-3.5 text-gray-400" />
-                                                                                <span className="text-xs text-gray-600">
-                                                                                    {job.location}
-                                                                                </span>
-                                                                            </div>
-                                                                        )}
+                                                                        <div className="space-y-2">
+                                                                            {job.location && (
+                                                                                <div className="flex items-center gap-1.5">
+                                                                                    <MapPin className="w-3 h-3 text-gray-400" />
+                                                                                    <span className="text-[10px] font-medium text-gray-500">
+                                                                                        {job.location}
+                                                                                    </span>
+                                                                                </div>
+                                                                            )}
 
-                                                                        {job.salary && (
-                                                                            <div className="flex items-center gap-1.5 mb-3">
-                                                                                <DollarSign className="w-3.5 h-3.5 text-gray-400" />
-                                                                                <span className="text-xs text-gray-600">
-                                                                                    {job.salary}
-                                                                                </span>
-                                                                            </div>
-                                                                        )}
+                                                                            {job.salary && (
+                                                                                <div className="flex items-center gap-1.5 px-2 py-1 bg-green-50 rounded text-green-700 w-fit">
+                                                                                    <DollarSign className="w-3 h-3" />
+                                                                                    <span className="text-[10px] font-bold">
+                                                                                        {job.salary}
+                                                                                    </span>
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
 
-                                                                        <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-                                                                            <div className="flex items-center gap-1.5">
-                                                                                <Calendar className="w-3.5 h-3.5 text-gray-400" />
-                                                                                <span className="text-xs text-gray-500">
-                                                                                    {formatDate(job.dateApplied || job.createdAt)}
-                                                                                </span>
-                                                                            </div>
+                                                                        <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between">
+                                                                            <span className="text-[10px] text-gray-400 font-medium whitespace-nowrap">
+                                                                                {formatDate(job.createdAt)}
+                                                                            </span>
                                                                             {job.url && (
                                                                                 <a
                                                                                     href={job.url}
                                                                                     target="_blank"
                                                                                     rel="noopener noreferrer"
-                                                                                    className="text-blue-600 hover:text-blue-800"
+                                                                                    className="flex items-center gap-1 text-blue-500 hover:text-blue-700 transition-all font-bold group/link"
                                                                                     onClick={(e) => e.stopPropagation()}
                                                                                 >
-                                                                                    <ExternalLink className="w-3.5 h-3.5" />
+                                                                                    <ExternalLink className="w-3 h-3 group-hover/link:translate-x-0.5 group-hover/link:-translate-y-0.5 transition-transform" />
+                                                                                    <span className="text-[10px] uppercase tracking-wider">Link</span>
                                                                                 </a>
                                                                             )}
                                                                         </div>
@@ -470,8 +491,8 @@ const Dashboard: React.FC = () => {
                             );
                         })}
                     </div>
-                </DragDropContext>
-            </div>
+                </div>
+            </DragDropContext>
 
             {selectedJob && (
                 <JobDetailDialog

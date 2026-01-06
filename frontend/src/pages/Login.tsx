@@ -56,8 +56,6 @@ const Login: React.FC = () => {
                         size="large"
                         text="signin_with"
                     />
-
-
                 </CardContent>
             </Card>
         </div>
