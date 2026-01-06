@@ -193,6 +193,39 @@ const JobDetailDialog: React.FC<JobDetailDialogProps> = ({ job, isOpen, onClose,
         }
     };
 
+    const handleTailoredResumeUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        try {
+            let extractedText = '';
+
+            if (file.type === 'application/pdf') {
+                const arrayBuffer = await file.arrayBuffer();
+                const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const textContent = await page.getTextContent();
+                    const pageText = textContent.items.map((item: any) => item.str).join(' ');
+                    extractedText += pageText + '\n';
+                }
+            } else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+                const arrayBuffer = await file.arrayBuffer();
+                const result = await mammoth.extractRawText({ arrayBuffer });
+                extractedText = result.value;
+            } else {
+                // Default text handler
+                extractedText = await file.text();
+            }
+
+            // Directly set the tailored resume
+            setTailoredResume(extractedText);
+        } catch (error) {
+            console.error('Error reading file:', error);
+            alert('Failed to read file. Please ensure it is a valid PDF, DOCX, or Text file.');
+        }
+    };
+
     const handleAIAction = async (action: 'resume' | 'cover-letter' | 'questions' | 'keywords') => {
         setAiLoading(prev => ({ ...prev, [action]: true }));
         try {
@@ -528,20 +561,15 @@ const JobDetailDialog: React.FC<JobDetailDialogProps> = ({ job, isOpen, onClose,
                                         <div className="flex gap-2">
                                             <input
                                                 type="file"
-                                                ref={fileInputRef}
                                                 className="hidden"
                                                 accept=".txt,.md,.json,.pdf,.docx"
-                                                onChange={async (e) => {
-                                                    await handleFileUpload(e);
-                                                    if (resumeText) {
-                                                        setTailoredResume(resumeText);
-                                                    }
-                                                }}
+                                                onChange={handleTailoredResumeUpload}
+                                                id="tailored-resume-upload"
                                             />
                                             <Button
                                                 variant="outline"
                                                 size="sm"
-                                                onClick={() => fileInputRef.current?.click()}
+                                                onClick={() => document.getElementById('tailored-resume-upload')?.click()}
                                             >
                                                 <Upload className="w-4 h-4 mr-2" />
                                                 Upload Resume File
