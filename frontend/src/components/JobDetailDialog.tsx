@@ -571,13 +571,27 @@ const JobDetailDialog: React.FC<JobDetailDialogProps> = ({ job, isOpen, onClose,
                                             size="sm"
                                             className="bg-white hover:bg-green-50 text-green-700 border-green-200"
                                             onClick={() => {
-                                                // Create a download link
-                                                const link = document.createElement('a');
-                                                link.href = `data:${job.resumeFile?.contentType};base64,${job.resumeFile?.data}`;
-                                                link.download = job.resumeFile?.filename || 'resume';
-                                                document.body.appendChild(link);
-                                                link.click();
-                                                document.body.removeChild(link);
+                                                const byteCharacters = atob(job.resumeFile!.data);
+                                                const byteNumbers = new Array(byteCharacters.length);
+                                                for (let i = 0; i < byteCharacters.length; i++) {
+                                                    byteNumbers[i] = byteCharacters.charCodeAt(i);
+                                                }
+                                                const byteArray = new Uint8Array(byteNumbers);
+                                                const blob = new Blob([byteArray], { type: job.resumeFile!.contentType });
+                                                const url = URL.createObjectURL(blob);
+
+                                                if (job.resumeFile!.contentType === 'application/pdf' || job.resumeFile!.contentType === 'text/plain') {
+                                                    window.open(url, '_blank');
+                                                } else {
+                                                    const link = document.createElement('a');
+                                                    link.href = url;
+                                                    link.download = job.resumeFile!.filename || 'resume';
+                                                    document.body.appendChild(link);
+                                                    link.click();
+                                                    document.body.removeChild(link);
+                                                }
+
+                                                setTimeout(() => URL.revokeObjectURL(url), 1000);
                                             }}
                                         >
                                             <Upload className="w-4 h-4 mr-2 rotate-180" /> {/* Reuse Upload icon rotated for download */}
@@ -603,14 +617,23 @@ const JobDetailDialog: React.FC<JobDetailDialogProps> = ({ job, isOpen, onClose,
                                                     size="sm"
                                                     className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                                                     onClick={() => {
-                                                        const url = URL.createObjectURL(resumeFile);
-                                                        const link = document.createElement('a');
-                                                        link.href = url;
-                                                        link.download = resumeFile.name;
-                                                        document.body.appendChild(link);
-                                                        link.click();
-                                                        document.body.removeChild(link);
-                                                        URL.revokeObjectURL(url);
+                                                        if (resumeFile.type === 'application/pdf' || resumeFile.type === 'text/plain') {
+                                                            const url = URL.createObjectURL(resumeFile);
+                                                            window.open(url, '_blank');
+                                                            // Clean up logic would be needed, but for simple view _blank usually handles it or we rely on page unload
+                                                            // A timeout can help revoke it after opening
+                                                            setTimeout(() => URL.revokeObjectURL(url), 1000);
+                                                        } else {
+                                                            // For DOCX or others, we must download
+                                                            const url = URL.createObjectURL(resumeFile);
+                                                            const link = document.createElement('a');
+                                                            link.href = url;
+                                                            link.download = resumeFile.name;
+                                                            document.body.appendChild(link);
+                                                            link.click();
+                                                            document.body.removeChild(link);
+                                                            URL.revokeObjectURL(url);
+                                                        }
                                                     }}
                                                 >
                                                     View
