@@ -41,7 +41,13 @@ interface Job {
     salary?: string;
     notes?: string;
     jdText?: string;
-    tailoredResume?: string;
+    resumeFile?: {
+        filename: string;
+        contentType: string;
+        size: number;
+        data: string;
+        uploadedAt: string;
+    };
 }
 
 interface JobDetailDialogProps {
@@ -57,7 +63,7 @@ const JobDetailDialog: React.FC<JobDetailDialogProps> = ({ job, isOpen, onClose,
     const [jdText, setJdText] = useState(job.jdText || '');
     const [notes, setNotes] = useState(job.notes || '');
     const [resumeText, setResumeText] = useState('');
-    const [tailoredResume, setTailoredResume] = useState(job.tailoredResume || '');
+    const [resumeFile, setResumeFile] = useState<File | null>(null);
     const [saving, setSaving] = useState(false);
     const [isEditMode, setIsEditMode] = useState(false);
     const [editedJob, setEditedJob] = useState({
@@ -85,7 +91,7 @@ const JobDetailDialog: React.FC<JobDetailDialogProps> = ({ job, isOpen, onClose,
     useEffect(() => {
         setJdText(job.jdText || '');
         setNotes(job.notes || '');
-        setTailoredResume(job.tailoredResume || '');
+        setResumeFile(null); // Reset file on job change
         setEditedJob({
             title: job.title,
             company: job.company,
@@ -99,11 +105,32 @@ const JobDetailDialog: React.FC<JobDetailDialogProps> = ({ job, isOpen, onClose,
     const handleSave = async () => {
         setSaving(true);
         try {
+            let updateData: any = { jdText, notes };
+
+            // Process resume file if one is selected
+            if (resumeFile) {
+                const reader = new FileReader();
+                const fileData = await new Promise((resolve, reject) => {
+                    reader.onload = (e) => resolve({
+                        filename: resumeFile.name,
+                        contentType: resumeFile.type,
+                        size: resumeFile.size,
+                        data: (e.target?.result as string).split(',')[1], // Remove prefix (e.g., "data:application/pdf;base64,")
+                        uploadedAt: new Date()
+                    });
+                    reader.onerror = reject;
+                    reader.readAsDataURL(resumeFile);
+                });
+                updateData.resumeFile = fileData;
+            }
+
             await axios.put(
                 `${import.meta.env.VITE_API_URL}/jobs/${job._id}`,
-                { jdText, notes, tailoredResume },
+                updateData,
                 { headers: { Authorization: `Bearer ${token}` } }
             );
+
+            setResumeFile(null); // Clear pending file
             onUpdate();
         } catch (error) {
             console.error('Error saving:', error);
@@ -193,36 +220,10 @@ const JobDetailDialog: React.FC<JobDetailDialogProps> = ({ job, isOpen, onClose,
         }
     };
 
-    const handleTailoredResumeUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleTailoredResumeUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
-        if (!file) return;
-
-        try {
-            let extractedText = '';
-
-            if (file.type === 'application/pdf') {
-                const arrayBuffer = await file.arrayBuffer();
-                const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
-                for (let i = 1; i <= pdf.numPages; i++) {
-                    const page = await pdf.getPage(i);
-                    const textContent = await page.getTextContent();
-                    const pageText = textContent.items.map((item: any) => item.str).join(' ');
-                    extractedText += pageText + '\n';
-                }
-            } else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
-                const arrayBuffer = await file.arrayBuffer();
-                const result = await mammoth.extractRawText({ arrayBuffer });
-                extractedText = result.value;
-            } else {
-                // Default text handler
-                extractedText = await file.text();
-            }
-
-            // Directly set the tailored resume
-            setTailoredResume(extractedText);
-        } catch (error) {
-            console.error('Error reading file:', error);
-            alert('Failed to read file. Please ensure it is a valid PDF, DOCX, or Text file.');
+        if (file) {
+            setResumeFile(file);
         }
     };
 
@@ -532,80 +533,104 @@ const JobDetailDialog: React.FC<JobDetailDialogProps> = ({ job, isOpen, onClose,
                     )}
 
                     {activeTab === 'resume' && (
-                        <div className="space-y-4">
+                        <div className="space-y-6">
                             <div className="flex justify-between items-center">
                                 <div>
-                                    <label className="text-sm font-medium text-gray-700">
-                                        Tailored Resume for {job.company}
-                                    </label>
-                                    <p className="text-xs text-gray-500 mt-1">
-                                        Save a customized version of your resume specifically for this job application
+                                    <h3 className="text-lg font-medium text-gray-900">Tailored Resume</h3>
+                                    <p className="text-sm text-gray-500">
+                                        Upload and save a specific resume version for {job.company}.
                                     </p>
                                 </div>
-                                <Button size="sm" onClick={handleSave} disabled={saving}>
+                                <Button size="sm" onClick={handleSave} disabled={saving || !resumeFile}>
                                     <Save className="w-4 h-4 mr-2" />
-                                    {saving ? 'Saving...' : 'Save Resume'}
+                                    {saving ? 'Saving...' : 'Save File'}
                                 </Button>
                             </div>
 
-                            <div className="p-4 border rounded-lg bg-blue-50 border-blue-200">
-                                <div className="flex items-start gap-3">
-                                    <div className="p-2 bg-blue-100 rounded-lg">
-                                        <FileText className="w-5 h-5 text-blue-600" />
+                            {/* Existing Saved File */}
+                            {job.resumeFile && !resumeFile && (
+                                <div className="p-4 border rounded-lg bg-green-50 border-green-200">
+                                    <div className="flex items-start justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2 bg-white rounded-lg border border-green-100">
+                                                <FileText className="w-8 h-8 text-green-600" />
+                                            </div>
+                                            <div>
+                                                <h4 className="font-medium text-green-900">{job.resumeFile.filename}</h4>
+                                                <div className="flex gap-4 text-xs text-green-700 mt-1">
+                                                    <span>{(job.resumeFile.size / 1024).toFixed(1)} KB</span>
+                                                    <span>•</span>
+                                                    <span>Uploaded {new Date(job.resumeFile.uploadedAt).toLocaleDateString()}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="bg-white hover:bg-green-50 text-green-700 border-green-200"
+                                            onClick={() => {
+                                                // Create a download link
+                                                const link = document.createElement('a');
+                                                link.href = `data:${job.resumeFile?.contentType};base64,${job.resumeFile?.data}`;
+                                                link.download = job.resumeFile?.filename || 'resume';
+                                                document.body.appendChild(link);
+                                                link.click();
+                                                document.body.removeChild(link);
+                                            }}
+                                        >
+                                            <Upload className="w-4 h-4 mr-2 rotate-180" /> {/* Reuse Upload icon rotated for download */}
+                                            Download
+                                        </Button>
                                     </div>
-                                    <div className="flex-1">
-                                        <h3 className="font-semibold text-blue-900 mb-2">Upload Resume File</h3>
-                                        <p className="text-sm text-blue-700 mb-3">
-                                            Upload your tailored resume (PDF, Word, or Text) and it will be extracted here for editing
-                                        </p>
-                                        <div className="flex gap-2">
+                                </div>
+                            )}
+
+                            {/* Upload Area */}
+                            <div className={`p-8 border-2 border-dashed rounded-lg transition-colors text-center ${resumeFile ? 'border-blue-400 bg-blue-50' : 'border-gray-300 hover:border-gray-400'}`}>
+                                <div className="flex flex-col items-center gap-3">
+                                    {resumeFile ? (
+                                        <>
+                                            <FileText className="w-12 h-12 text-blue-500" />
+                                            <div className="max-w-xs truncate">
+                                                <p className="font-medium text-blue-900">{resumeFile.name}</p>
+                                                <p className="text-sm text-blue-600">{(resumeFile.size / 1024).toFixed(1)} KB</p>
+                                            </div>
+                                            <div className="flex gap-2 mt-2">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                                                    onClick={() => setResumeFile(null)}
+                                                >
+                                                    Remove
+                                                </Button>
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Upload className="w-10 h-10 text-gray-400" />
+                                            <div>
+                                                <p className="font-medium text-gray-700">Drop your resume here, or click to browse</p>
+                                                <p className="text-sm text-gray-500 mt-1">Supports PDF, DOCX, TXT</p>
+                                            </div>
                                             <input
                                                 type="file"
                                                 className="hidden"
-                                                accept=".txt,.md,.json,.pdf,.docx"
-                                                onChange={handleTailoredResumeUpload}
                                                 id="tailored-resume-upload"
+                                                accept=".pdf,.docx,.txt"
+                                                onChange={handleTailoredResumeUpload}
                                             />
                                             <Button
                                                 variant="outline"
-                                                size="sm"
+                                                className="mt-2"
                                                 onClick={() => document.getElementById('tailored-resume-upload')?.click()}
                                             >
-                                                <Upload className="w-4 h-4 mr-2" />
-                                                Upload Resume File
+                                                Select File
                                             </Button>
-                                        </div>
-                                    </div>
+                                        </>
+                                    )}
                                 </div>
                             </div>
-
-                            <Textarea
-                                placeholder="Paste or type your tailored resume here..."
-                                className="min-h-[400px] font-mono text-sm"
-                                value={tailoredResume}
-                                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setTailoredResume(e.target.value)}
-                            />
-
-                            {tailoredResume && (
-                                <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
-                                    <div className="flex items-center gap-2">
-                                        <FileText className="w-4 h-4 text-green-600" />
-                                        <span className="text-sm text-green-800 font-medium">
-                                            Resume saved ({tailoredResume.length} characters)
-                                        </span>
-                                    </div>
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => {
-                                            navigator.clipboard.writeText(tailoredResume);
-                                            alert('Resume copied to clipboard!');
-                                        }}
-                                    >
-                                        Copy to Clipboard
-                                    </Button>
-                                </div>
-                            )}
                         </div>
                     )}
 

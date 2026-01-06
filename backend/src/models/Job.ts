@@ -7,7 +7,13 @@ export interface IJob extends Document {
     location?: string;
     url?: string;
     jdText?: string;
-    tailoredResume?: string;
+    resumeFile?: {
+        filename: string;
+        contentType: string;
+        size: number;
+        data: string; // base64 encoded file data
+        uploadedAt: Date;
+    };
     source: 'linkedin' | 'indeed' | 'glassdoor' | 'manual';
     status: 'applied' | 'interviewing' | 'offer' | 'rejected' | 'wishlist';
     dateApplied?: Date;
@@ -24,7 +30,13 @@ const JobSchema: Schema = new Schema({
     location: { type: String },
     url: { type: String },
     jdText: { type: String },
-    tailoredResume: { type: String },
+    resumeFile: {
+        filename: { type: String },
+        contentType: { type: String },
+        size: { type: Number },
+        data: { type: String }, // base64 encoded
+        uploadedAt: { type: Date, default: Date.now }
+    },
     source: { type: String, enum: ['linkedin', 'indeed', 'glassdoor', 'manual'], default: 'manual' },
     status: { type: String, enum: ['applied', 'interviewing', 'offer', 'rejected', 'wishlist'], default: 'wishlist', index: true },
     dateApplied: { type: Date },
