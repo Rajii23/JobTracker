@@ -59,7 +59,8 @@ app.get('/health', (req, res) => {
         dbStatus,
         readyState: mongoose.connection.readyState,
         envVarCheck: process.env.MONGODB_URI ? 'Set' : 'Not Set',
-        lastError: dbError
+        lastError: dbError,
+        timestamp: new Date().toISOString()
     });
 });
 
