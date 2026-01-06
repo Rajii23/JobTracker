@@ -581,7 +581,7 @@ const JobDetailDialog: React.FC<JobDetailDialogProps> = ({ job, isOpen, onClose,
                                             }}
                                         >
                                             <Upload className="w-4 h-4 mr-2 rotate-180" /> {/* Reuse Upload icon rotated for download */}
-                                            Download
+                                            View
                                         </Button>
                                     </div>
                                 </div>
@@ -613,7 +613,7 @@ const JobDetailDialog: React.FC<JobDetailDialogProps> = ({ job, isOpen, onClose,
                                                         URL.revokeObjectURL(url);
                                                     }}
                                                 >
-                                                    View / Download
+                                                    View
                                                 </Button>
                                             </div>
                                         </>
