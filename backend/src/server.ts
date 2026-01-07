@@ -52,7 +52,20 @@ app.use('/api/ai', aiRoutes);
 let dbError: string | null = null;
 
 // Health Check
-app.get('/health', (req, res) => {
+app.get('/health', async (req, res) => {
+    try {
+        if (mongoose.connection.readyState !== 1 && process.env.MONGODB_URI) {
+            console.log('Health check: DB not connected, attempting to wait...');
+            await Promise.race([
+                mongoose.connection.asPromise(),
+                new Promise((_, reject) => setTimeout(() => reject(new Error('Connection timeout')), 4000))
+            ]);
+        }
+    } catch (err: any) {
+        console.error('Health check connection wait error:', err.message);
+        dbError = err.message;
+    }
+
     const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
     res.status(200).json({
         status: 'ok',
@@ -60,26 +73,35 @@ app.get('/health', (req, res) => {
         readyState: mongoose.connection.readyState,
         envVarCheck: process.env.MONGODB_URI ? 'Set' : 'Not Set',
         lastError: dbError,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        nodeEnv: process.env.NODE_ENV
     });
 });
 
 // Database Connection
-if (process.env.MONGODB_URI) {
-    mongoose.connect(process.env.MONGODB_URI as string, {
-        serverSelectionTimeoutMS: 5000,
-    })
-        .then(() => {
+const connectDB = async () => {
+    if (mongoose.connection.readyState >= 1) return;
+
+    if (process.env.MONGODB_URI) {
+        try {
+            console.log('Connecting to MongoDB...');
+            await mongoose.connect(process.env.MONGODB_URI as string, {
+                serverSelectionTimeoutMS: 5000,
+            });
             console.log('Connected to MongoDB');
             dbError = null;
-        })
-        .catch((err) => {
+        } catch (err: any) {
             console.error('MongoDB connection error:', err);
             dbError = err.message;
-        });
-} else {
-    dbError = 'MONGODB_URI environment variable is not set';
-}
+        }
+    } else {
+        dbError = 'MONGODB_URI environment variable is not set';
+        console.error(dbError);
+    }
+};
+
+// Initial connection attempt
+connectDB();
 
 // Start Server
 if (process.env.NODE_ENV !== 'production') {
