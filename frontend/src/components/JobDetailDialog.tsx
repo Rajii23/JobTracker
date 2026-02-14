@@ -28,27 +28,7 @@ import * as pdfjsLib from 'pdfjs-dist';
 // Initialize PDF.js worker
 pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
 
-interface Job {
-    _id: string;
-    title: string;
-    company: string;
-    location?: string;
-    url?: string;
-    status: 'wishlist' | 'applied' | 'interviewing' | 'offer' | 'rejected';
-    dateApplied?: string;
-    source: string;
-    createdAt: string;
-    salary?: string;
-    notes?: string;
-    jdText?: string;
-    resumeFile?: {
-        filename: string;
-        contentType: string;
-        size: number;
-        data: string;
-        uploadedAt: string;
-    };
-}
+import { updateLocalJob, deleteLocalJob, type Job } from '@/lib/jobStorage';
 
 interface JobDetailDialogProps {
     job: Job;
@@ -135,7 +115,32 @@ const JobDetailDialog: React.FC<JobDetailDialogProps> = ({ job, isOpen, onClose,
             alert('Job updated successfully!');
         } catch (error) {
             console.error('Error saving:', error);
-            alert('Failed to save job. Please try again.');
+
+            // Local storage fallback
+            try {
+                // Re-construct the update data since we can't easily access the scope variable 'updateData' if we don't declare it outside
+                // But wait, the previous code block defined 'updateData' inside try.
+                // We'll reconstruct a basic update + existing job
+
+                // Note: handling resume file in local storage might be heavy, so we might skip it or try best effort
+                // For now, let's just update text fields to be safe against quota limits, or try to include resume if small
+
+                const updatedJob: Job = {
+                    ...job,
+                    jdText,
+                    notes,
+                    // We knowingly skip new resume file upload in offline mode to avoid quota issues for now, or we could accept it if we had the data
+                    // To keep it simple: just update text fields
+                };
+
+                updateLocalJob(updatedJob);
+                setResumeFile(null);
+                onUpdate();
+                alert('Job updated locally (offline mode). Attachments may not be saved.');
+            } catch (localError) {
+                console.error('Local save failed:', localError);
+                alert('Failed to save job. Please try again.');
+            }
         } finally {
             setSaving(false);
         }
@@ -153,6 +158,15 @@ const JobDetailDialog: React.FC<JobDetailDialogProps> = ({ job, isOpen, onClose,
             onUpdate();
         } catch (error) {
             console.error('Error saving details:', error);
+            // Local fallback
+            const updatedJob: Job = {
+                ...job,
+                ...editedJob,
+                status: editedJob.status as any // Ensure type compatibility
+            };
+            updateLocalJob(updatedJob);
+            setIsEditMode(false);
+            onUpdate();
         } finally {
             setSaving(false);
         }
@@ -169,7 +183,8 @@ const JobDetailDialog: React.FC<JobDetailDialogProps> = ({ job, isOpen, onClose,
             onUpdate();
         } catch (error) {
             console.error('Error deleting job:', error);
-            // Fallback: close and update anyway to handle mock jobs or sync issues
+            // Fallback: delete locally
+            deleteLocalJob(job._id);
             onClose();
             onUpdate();
         } finally {

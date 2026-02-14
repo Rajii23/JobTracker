@@ -21,20 +21,7 @@ import axios from 'axios';
 import JobDetailDialog from '@/components/JobDetailDialog';
 import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
 
-interface Job {
-    _id: string;
-    title: string;
-    company: string;
-    location?: string;
-    url?: string;
-    status: 'wishlist' | 'applied' | 'interviewing' | 'offer' | 'rejected';
-    dateApplied?: string;
-    source: string;
-    createdAt: string;
-    salary?: string;
-    notes?: string;
-    jdText?: string;
-}
+import { getLocalJobs, addLocalJob, updateLocalJob, saveLocalJobs, type Job } from '@/lib/jobStorage';
 
 const Dashboard: React.FC = () => {
     const { user, logout, token } = useAuth();
@@ -43,6 +30,7 @@ const Dashboard: React.FC = () => {
     const [isAddJobOpen, setIsAddJobOpen] = useState(false);
     const [selectedJob, setSelectedJob] = useState<Job | null>(null);
     const [isDetailOpen, setIsDetailOpen] = useState(false);
+    const [dbStatus, setDbStatus] = useState<'connected' | 'disconnected' | 'loading'>('loading');
 
     const [newJob, setNewJob] = useState({
         title: '',
@@ -63,32 +51,53 @@ const Dashboard: React.FC = () => {
     ];
 
     useEffect(() => {
-        fetchJobs();
+        if (token) {
+            fetchJobs();
+        }
     }, [token]);
 
     const fetchJobs = async () => {
+        if (!token) return;
+
         try {
             const response = await axios.get(`${import.meta.env.VITE_API_URL}/jobs`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setJobs(response.data);
+            // Sync successful backend request to local storage so we have latest data
+            saveLocalJobs(response.data);
+
+            const status = response.headers['x-database-status'] as any;
+            if (status) setDbStatus(status);
+            else setDbStatus('connected'); // Fallback if header missing but request succeeded
         } catch (error) {
             console.error('Error fetching jobs:', error);
-            // Only load sample placeholder data if we have absolutely nothing and the fetch failed
-            if (jobs.length === 0) {
-                console.log('Loading sample data as fallback...');
-                setJobs([
-                    {
-                        _id: 'sample-1',
-                        title: 'Product Designer (Sample)',
-                        company: 'Linear',
-                        location: 'Remote',
-                        status: 'applied',
-                        source: 'manual',
-                        createdAt: new Date().toISOString(),
-                        salary: '$140k'
-                    }
-                ]);
+            setDbStatus('disconnected');
+
+            // Try to load from localStorage first
+            const localJobs = getLocalJobs();
+            if (localJobs.length > 0) {
+                console.log('Loaded jobs from local storage');
+                setJobs(localJobs);
+            } else {
+                // Only load sample placeholder data if we have absolutely nothing
+                if (jobs.length === 0) {
+                    console.log('Loading sample data as fallback...');
+                    const sampleJobs: Job[] = [
+                        {
+                            _id: 'sample-1',
+                            title: 'Product Designer (Sample)',
+                            company: 'Linear',
+                            location: 'Remote',
+                            status: 'applied',
+                            source: 'manual',
+                            createdAt: new Date().toISOString(),
+                            salary: '$140k'
+                        }
+                    ];
+                    setJobs(sampleJobs);
+                    // Don't save sample jobs to local storage to avoid polluting real data
+                }
             }
         }
     };
@@ -111,6 +120,11 @@ const Dashboard: React.FC = () => {
                 source: 'manual',
                 createdAt: new Date().toISOString()
             };
+
+            // Save to local storage
+            addLocalJob(mockJob);
+
+            // Update state immediately
             setJobs([...jobs, mockJob]);
             setIsAddJobOpen(false);
         }
@@ -180,9 +194,16 @@ const Dashboard: React.FC = () => {
             );
         } catch (error) {
             console.error('Failed to update job status:', error);
-            // Revert changes on failure
-            fetchJobs();
-            alert('Failed to update job status. Please try again.');
+            // In disconnected mode, update local storage
+            if (jobMoved) {
+                const updatedJob = { ...jobMoved, status: newStatus as any };
+                updateLocalJob(updatedJob);
+                // Keep the UI update since we just persisted it locally
+            } else {
+                // Revert changes on failure if we couldn't even persist locally
+                fetchJobs();
+                alert('Failed to update job status. Please try again.');
+            }
         }
     };
 
@@ -191,6 +212,28 @@ const Dashboard: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-gray-50">
+            {/* Database Disconnected Warning */}
+            {dbStatus === 'disconnected' && (
+                <div className="bg-amber-50 border-b border-amber-200 px-4 py-2">
+                    <div className="max-w-7xl mx-auto flex items-center justify-between gap-3 text-amber-800 text-sm">
+                        <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></div>
+                            <p className="font-medium">
+                                Database disconnected. Changes are being saved locally and may be lost if the server restarts or you log out.
+                            </p>
+                        </div>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={fetchJobs}
+                            className="text-amber-800 hover:bg-amber-100 h-7 text-xs font-bold"
+                        >
+                            Retry Connection
+                        </Button>
+                    </div>
+                </div>
+            )}
+
             {/* Top Navigation */}
             <nav className="bg-white/80 backdrop-blur-md border-b border-gray-200 sticky top-0 z-50">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
